@@ -11,7 +11,11 @@
   transition: background 0.4s ease;
 }
 
-.section { padding: clamp(80px,12vw,150px) clamp(20px,6vw,90px); }
+.section {
+  position: relative;
+  z-index: 1;
+  padding: clamp(80px,12vw,150px) clamp(20px,6vw,90px);
+}
 .wrap    { max-width: 1180px; margin: 0 auto; }
 .narrow  { max-width: 780px; }
 
@@ -316,6 +320,8 @@
 
 /* ── footer ──────────────────────────────────────────────── */
 .footer {
+  position: relative;
+  z-index: 1;
   padding: 30px;
   text-align: center;
   color: var(--muted); font-size: 0.8rem;

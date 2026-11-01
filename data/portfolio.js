@@ -86,6 +86,30 @@ export const site = {
       repo: 'https://github.com/SAYANI-AI-68-2C/Aroma_restaurant-1-',
       highlight: true,
     },
+    {
+      name: 'Emotion Aware Learning Assistant',
+      category: 'AI · Affective Computing · Computer Vision',
+      date: '2025 – 2026',
+      description:
+        'Intelligent multimodal affective learning system that monitors student facial emotions, attentiveness, and cognitive load in real time using OpenCV and deep CNNs, dynamically tuning content pacing and recommending adaptive quizzes.',
+      tags: ['Emotion AI', 'Computer Vision', 'Deep Learning', 'Python', 'TensorFlow', 'OpenCV'],
+      image: '/images/projects/emotion-learning-assistant.svg',
+      demo: '',
+      repo: 'https://github.com/SAYANI-AI-68-2C',
+      highlight: true,
+    },
+    {
+      name: 'Smart Library Management System',
+      category: 'IoT · Embedded Systems · Full-Stack',
+      date: '2025 – 2026',
+      description:
+        'Comprehensive IoT-enabled digital library automation system developed under TechEd · IEDC (Dept. of CSE, UEM Kolkata). Features RFID/barcode book tracking, automated cataloging, real-time circulation records, and fine management analytics.',
+      tags: ['Python', 'IoT', 'RFID', 'MySQL', 'Full-Stack', 'Embedded Systems'],
+      image: '/images/projects/smart-library.svg',
+      demo: '',
+      repo: 'https://github.com/SAYANI-AI-68-2C',
+      highlight: true,
+    },
   ],
 
   // ── achievements ─────────────────────────────────────────

@@ -4,12 +4,18 @@ import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { site } from '../../data/portfolio';
 import SkillIcon from '../SkillIcon/SkillIcon';
+import { useFloatingCards } from '../../lib/useFloatingCards';
 import styles from './Sections.module.css';
 
-// Load 3D canvas lazily – keeps TTI low
+// Load 3D canvases lazily – keeps TTI low
 const Interactive3DCanvas = dynamic(
   () => import('../Interactive3D/Interactive3DCanvas'),
   { ssr: false, loading: () => <div style={{ height: 420 }} /> }
+);
+
+const NeuralMesh = dynamic(
+  () => import('../NeuralMesh/NeuralMesh'),
+  { ssr: false }
 );
 
 /* ── tiny helper: mailto form submit ── */
@@ -33,9 +39,12 @@ function useContactForm() {
 
 export default function Sections() {
   const { msg, bind, onSubmit } = useContactForm();
+  useFloatingCards();
 
   return (
     <div className={styles.root}>
+      {/* 3D Interactive Neural Mesh Background across all sections from page 2 */}
+      <NeuralMesh />
 
       {/* ── ABOUT ──────────────────────────────────────────── */}
       <section id="about" className={styles.section}>
