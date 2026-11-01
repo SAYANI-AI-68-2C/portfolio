@@ -24,10 +24,10 @@ export const site = {
 
   // ── about ────────────────────────────────────────────────
   summary:
-    'B.Tech Computer Science and Engineering (Artificial Intelligence) student graduating in 2026, seeking Machine Learning Engineer, Data Analyst, or Software Engineer (entry-level) roles. Hands-on experience in machine learning, computer vision, embedded systems, and full-stack application development using Python, C, and Java. Skilled in data analysis, data preprocessing, feature engineering, fraud detection, and anomaly detection. Demonstrated leadership delivering AI-driven solutions from concept to implementation, backed by competition wins and technical certifications in cloud computing and generative AI.',
+    'B.Tech Computer Science and Engineering (Artificial Intelligence) student graduating in 2028, seeking Machine Learning Engineer, Data Analyst, or Software Engineer (entry-level) roles. Hands-on experience in machine learning, computer vision, embedded systems, and full-stack application development using Python, C, and Java. Skilled in data analysis, data preprocessing, feature engineering, fraud detection, and anomaly detection. Demonstrated leadership delivering AI-driven solutions from concept to implementation, backed by competition wins and technical certifications in cloud computing and generative AI.',
 
   about: [
-    ['UEM Kolkata', 'B.Tech CSE (Artificial Intelligence) · Expected 2026'],
+    ['UEM Kolkata', 'B.Tech CSE (Artificial Intelligence) · Expected 2028'],
     ['Senior Secondary', 'Sainthia High School · Class XII'],
     ['Secondary', 'Deriapur Anchal High School · Class X'],
   ],
@@ -140,6 +140,6 @@ export const site = {
     { period: 'Sep 2025', title: 'Programming with Generative AI', body: 'NPTEL Swayam certification.' },
     { period: 'Feb 2025', title: 'Smart Expense & Budget Tracker', body: 'Full-stack data analysis app built in Python.' },
     { period: 'Jan 2025', title: 'AI-Powered Smart Helmet', body: 'Embedded AI project using Raspberry Pi, TensorFlow and OpenCV.' },
-    { period: '2024 – 2026', title: 'B.Tech CSE (Artificial Intelligence)', body: 'University of Engineering and Management, Kolkata.' },
+    { period: '2024 – 2028', title: 'B.Tech CSE (Artificial Intelligence)', body: 'University of Engineering and Management, Kolkata.' },
   ],
 };
