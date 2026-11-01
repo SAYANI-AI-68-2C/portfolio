@@ -1,0 +1,208 @@
+/* ── loader overlay ──────────────────────────────────────── */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+
+.leaving {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.7s;
+}
+
+/* Split-panel curtains */
+.panelTop,
+.panelBot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: #08090D;
+  z-index: 2;
+  transition: transform 0.85s cubic-bezier(0.77, 0, 0.18, 1) 0.2s;
+}
+.panelTop { top: 0; }
+.panelBot { bottom: 0; }
+
+.leaving .panelTop { transform: translateY(-101%); }
+.leaving .panelBot { transform: translateY(101%); }
+
+/* 3-D canvas */
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Violet/cyan glow */
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 60% at 50% 50%, rgba(155, 123, 255, 0.15), transparent 70%),
+    radial-gradient(40% 40% at 80% 20%, rgba(85, 230, 255, 0.08), transparent 70%);
+}
+
+/* Scan-line texture */
+.scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.07) 3px,
+    rgba(0, 0, 0, 0.07) 4px
+  );
+}
+
+/* ── center content wrapper ──────────────────────────────── */
+.lw {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  transition: opacity 0.4s ease, transform 0.5s ease;
+}
+
+.leaving .lw {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+/* ── spinning SVG ring ───────────────────────────────────── */
+.lc {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+}
+
+.lc::before {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px dashed rgba(244, 243, 250, 0.12);
+  animation: spin 9s linear infinite;
+}
+
+.lc::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 0, #55E6FF 0 4px, transparent 5px);
+  animation: spin 3.2s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.lc svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.lc circle { fill: none; stroke-width: 3; }
+
+.r0 { stroke: rgba(244, 243, 250, 0.12); }
+.r1 {
+  stroke: #9B7BFF;
+  stroke-linecap: round;
+  stroke-dasharray: 339.3;
+  stroke-dashoffset: 339.3;
+  filter: drop-shadow(0 0 6px rgba(155, 123, 255, 0.7));
+}
+
+/* ── logo text ───────────────────────────────────────────── */
+.logo {
+  font-family: var(--display, sans-serif);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(100deg, #9B7BFF, #55E6FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(155, 123, 255, 0.5)); }
+  50%       { filter: drop-shadow(0 0 36px rgba(155, 123, 255, 0.9)); }
+}
+
+/* ── animated name letters ───────────────────────────────── */
+.lname {
+  display: flex;
+  overflow: hidden;
+  height: 1.35em;
+  font-family: var(--display, sans-serif);
+  font-weight: 800;
+  font-size: clamp(1.3rem, 5vw, 2.3rem);
+  letter-spacing: 0.14em;
+  color: #F4F3FA;
+}
+
+.lname span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(110%);
+  animation: lup 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes lup { to { opacity: 1; transform: none; } }
+
+/* ── progress bar ────────────────────────────────────────── */
+.lbar {
+  width: min(300px, 70vw);
+  height: 2px;
+  background: rgba(244, 243, 250, 0.12);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.lbarFill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, #9B7BFF, #55E6FF);
+  box-shadow: 0 0 12px rgba(155, 123, 255, 0.6);
+}
+
+/* ── meta row ────────────────────────────────────────────── */
+.lmeta {
+  width: min(300px, 70vw);
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #9294A3;
+  margin-top: -10px;
+}
+
+.pct {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: rgba(85, 230, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
