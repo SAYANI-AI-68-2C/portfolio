@@ -106,11 +106,17 @@ function Interactive3DCanvas() {
     };
     if (!reduceMotion) container.addEventListener('pointermove', onMove, { passive: true });
 
+    let isIntersecting = false;
+    const io = new IntersectionObserver(([entry]) => {
+      isIntersecting = entry.isIntersecting;
+    }, { threshold: 0.05 });
+    io.observe(container);
+
     /* Animation */
     let raf = 0, t = 0;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      if (document.hidden) return;
+      if (!isIntersecting || document.hidden) return;
       t += 0.016;
       mx += (tmx - mx) * 0.05;
       my += (tmy - my) * 0.05;
@@ -145,6 +151,7 @@ function Interactive3DCanvas() {
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
       container.removeEventListener('pointermove', onMove);
       [coreGeo, coreMat, innerGeo, innerMat, pGeo, pMat].forEach(o => o.dispose?.());
       renderer.dispose();

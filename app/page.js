@@ -10,7 +10,6 @@ import { profile } from '../data/portfolio';
 import { useScrollReveal } from '../lib/useScrollReveal';
 
 const Loader = dynamic(() => import('../components/Loader/Loader'), { ssr: false });
-const BackgroundGlobe = dynamic(() => import('../components/BackgroundGlobe/BackgroundGlobe'), { ssr: false });
 
 function PageContent() {
   useScrollReveal();
@@ -39,11 +38,6 @@ export default function Page() {
 
   return (
     <>
-      {/* Global 3-D background globe — behind everything */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <BackgroundGlobe />
-      </div>
-
       {/* Main portfolio content mounted immediately */}
       <PageContent />
 
