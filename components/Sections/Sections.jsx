@@ -40,6 +40,8 @@ function useContactForm() {
 export default function Sections() {
   const { msg, bind, onSubmit } = useContactForm();
   useFloatingCards();
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const resolveUrl = (u) => (u && u.startsWith('/') ? `${basePath}${u}` : u);
 
   return (
     <div className={styles.root}>
@@ -105,7 +107,7 @@ export default function Sections() {
                 {p.image && (
                   <div className={styles.projectImageWrap}>
                     <img
-                      src={p.image}
+                      src={resolveUrl(p.image)}
                       alt={`${p.name} preview`}
                       className={styles.projectImage}
                       loading="lazy"
@@ -200,7 +202,7 @@ export default function Sections() {
           {/* CV download buttons */}
           <div className={`${styles.resumeActions} sg-reveal sg-d3`}>
             <a
-              href={site.resumeUrl || '/Sayani_Ghosal_Resume.pdf'}
+              href={resolveUrl(site.resumeUrl || '/Sayani_Ghosal_Resume.pdf')}
               download="Sayani_Ghosal_Resume.pdf"
               className={styles.downloadCvPrimary}
             >
@@ -213,7 +215,7 @@ export default function Sections() {
             </a>
             {site.resumeDocx && (
               <a
-                href={site.resumeDocx}
+                href={resolveUrl(site.resumeDocx)}
                 download="Sayani_Ghosal_ATS_Resume_v2.docx"
                 className={styles.downloadCvSecondary}
                 title="Download DOCX format"

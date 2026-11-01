@@ -58,18 +58,11 @@ export default function VideoIntro({
   /* ---------- playback helpers ---------- */
   const playAll = useCallback(() => {
     const fg = fgRef.current;
-    const bg = ambientRef.current;
-    // the blurred layer is display:none on portrait/mobile, so don't decode it there
-    if (bg && bg.offsetParent !== null) {
-      if (fg) bg.currentTime = fg.currentTime;
-      bg.play().catch(() => {});
-    }
     return Promise.resolve(fg ? fg.play() : undefined);
   }, []);
 
   const pauseAll = useCallback(() => {
     fgRef.current?.pause();
-    ambientRef.current?.pause();
   }, []);
 
   const togglePlay = useCallback(() => {
@@ -204,30 +197,22 @@ export default function VideoIntro({
     };
   }, [nextId, playAll, pauseAll]);
 
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const resolvedSrc = src?.startsWith('/') ? `${basePath}${src}` : src;
+  const resolvedPoster = poster?.startsWith('/') ? `${basePath}${poster}` : poster;
+
   return (
     <section ref={rootRef} id="home" className={styles.hero} aria-label="Introduction">
       <div ref={mediaRef} className={styles.media}>
-        {/* blurred duplicate = ambient light spill */}
-        <video
-          ref={ambientRef}
-          className={styles.ambient}
-          src={src}
-          poster={poster}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-          tabIndex={-1}
-          disablePictureInPicture
-        />
+        {/* Hardware-accelerated CSS ambient glow backlight */}
+        <div className={styles.ambientGlow} aria-hidden="true" />
         <div className={styles.fgWrap}>
           <div ref={parallaxRef} className={styles.fgInner}>
             <video
               ref={fgRef}
               className={styles.fg}
-              src={src}
-              poster={poster}
+              src={resolvedSrc}
+              poster={resolvedPoster}
               autoPlay
               loop
               muted
