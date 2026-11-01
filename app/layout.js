@@ -16,12 +16,14 @@ const manrope = Manrope({
 });
 
 export const metadata = {
+  metadataBase: new URL('https://portfolio-sayani-ghosal.vercel.app'),
   title: 'Sayani Ghosal — AI/ML · Data Analyst · Software Engineer',
   description:
     'Portfolio of Sayani Ghosal: B.Tech CSE (AI) student at UEM Kolkata. ML Engineer, Data Analyst & Full-Stack Developer with hands-on experience in TensorFlow, OpenCV, AWS, and embedded systems.',
   openGraph: {
     title: 'Sayani Ghosal — AI/ML · Data Analyst · Software Engineer',
     description: 'ML Engineer, Data Analyst & Software Engineer — Kolkata, India.',
+    url: 'https://portfolio-sayani-ghosal.vercel.app',
     type: 'website',
   },
 };

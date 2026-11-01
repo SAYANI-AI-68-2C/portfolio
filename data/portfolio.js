@@ -14,6 +14,7 @@ export const site = {
   status: 'Open to ML Engineer, Data Analyst & Software Engineer roles',
 
   // ── contact ──────────────────────────────────────────────
+  liveUrl: 'https://portfolio-sayani-ghosal.vercel.app',
   email: 'sayani.ghosal2024@iem.edu.in',
   resumeUrl: '/Sayani_Ghosal_Resume.pdf',
   resumeDocx: '/Sayani_Ghosal_ATS_Resume_v2.docx',

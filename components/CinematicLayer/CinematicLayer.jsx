@@ -110,14 +110,14 @@ function CinematicLayer({ activeRef }) {
       return undefined; // no WebGL: hero still works without the layer
     }
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.0 : 1.25));
 
     const scene = new Scene();
     const camera = new PerspectiveCamera(50, 1, 0.1, 50);
     camera.position.set(0, 0, 6);
 
     // ---- particle data (built once) ----
-    const count = mobile ? 90 : 220;
+    const count = mobile ? 45 : 100;
     const position = new Float32Array(count * 3);
     const size = new Float32Array(count);
     const seed = new Float32Array(count);

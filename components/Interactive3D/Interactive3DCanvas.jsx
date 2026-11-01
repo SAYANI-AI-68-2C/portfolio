@@ -35,7 +35,7 @@ function Interactive3DCanvas() {
     } catch { return; }
 
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
 
     const scene  = new Scene();
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
@@ -66,7 +66,7 @@ function Interactive3DCanvas() {
     const ring2 = makeRing(4.3, 0.018, 0x55e6ff, 0.45, -Math.PI * 0.28, 0, Math.PI * 0.25);
 
     /* Particle swarm */
-    const PC = mobile ? 80 : 180;
+    const PC = mobile ? 40 : 80;
     const pCoords = new Float32Array(PC * 3);
     const pVel    = [];
     for (let i = 0; i < PC; i++) {

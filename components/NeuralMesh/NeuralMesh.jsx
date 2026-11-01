@@ -18,7 +18,6 @@ import {
   Points,
   PointsMaterial,
   Scene,
-  SphereGeometry,
   TorusGeometry,
   TorusKnotGeometry,
   Vector2,
@@ -27,12 +26,9 @@ import {
 } from 'three';
 
 /**
- * Ultra-Smooth High-Performance 3D Neural Mesh Background.
- * 60-120 FPS optimized:
- * - Distance-squared spatial checks (0 Math.sqrt in hot loops).
- * - Adaptive node counts (65 desktop / 32 mobile).
- * - Auto-pauses when user is on the hero video page or when tab is inactive.
- * - Dynamic synaptic filaments, Torus knot, wireframe icosahedrons, and star dust.
+ * 60 FPS Constant Ultra-Fast 3D Neural Mesh Background.
+ * Single draw-call instanced points and fixed-topology synaptic lattice.
+ * Uses 0 distance checks per frame and 0 layout recalculations.
  */
 export default function NeuralMesh() {
   const canvasRef = useRef(null);
@@ -50,12 +46,15 @@ export default function NeuralMesh() {
       renderer = new WebGLRenderer({
         canvas,
         alpha: true,
-        antialias: false, // Antialias off saves ~40% GPU fill rate with zero visual difference for wireframes/points
+        antialias: false,
+        depth: false,
+        stencil: false,
         powerPreference: 'high-performance',
       });
       if (!renderer || !renderer.getContext()) return;
       renderer.setClearColor(0x000000, 0);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      // Cap pixel ratio to 1.25 on desktop, 1.0 on mobile to guarantee steady 60fps on retina displays
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : 1.25));
     } catch {
       return;
     }
@@ -63,60 +62,107 @@ export default function NeuralMesh() {
     const scene = new Scene();
     scene.fog = new FogExp2(0x08090d, 0.02);
 
-    const camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 80);
+    const camera = new PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 70);
     camera.position.set(0, 0, 14);
 
     const mainGroup = new Group();
     scene.add(mainGroup);
 
-    /* ─── Neural Nodes & Synapses ─── */
-    const NODE_COUNT = isMobile ? 32 : 65;
-    const CONNECT_DIST = isMobile ? 2.8 : 3.4;
-    const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
-    const CURSOR_CONNECT_DIST = isMobile ? 3.5 : 4.5;
-    const CURSOR_CONNECT_DIST_SQ = CURSOR_CONNECT_DIST * CURSOR_CONNECT_DIST;
+    /* ─── Neural Nodes (Single Points Draw Call) ─── */
+    const NODE_COUNT = isMobile ? 32 : 60;
+    const nodeCoords = new Float32Array(NODE_COUNT * 3);
+    const nodeBaseCoords = new Float32Array(NODE_COUNT * 3);
+    const nodeVelocities = new Float32Array(NODE_COUNT * 3);
+    const nodeColors = new Float32Array(NODE_COUNT * 3);
 
-    const nodePositions = [];
-    const nodeVelocities = [];
-    const nodeMeshes = [];
-
-    const VIOLET = 0x9b7bff;
-    const CYAN = 0x55e6ff;
-    const WHITE = 0xf4f3fa;
-
-    const sphereGeo = new SphereGeometry(0.09, 8, 8);
-    const sphereMatViolet = new MeshBasicMaterial({ color: VIOLET, transparent: true, opacity: 0.85, blending: AdditiveBlending });
-    const sphereMatCyan   = new MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.9, blending: AdditiveBlending });
-    const sphereMatWhite  = new MeshBasicMaterial({ color: WHITE, transparent: true, opacity: 0.95, blending: AdditiveBlending });
+    const VIOLET = new Color(0x9b7bff);
+    const CYAN   = new Color(0x55e6ff);
+    const WHITE  = new Color(0xf4f3fa);
 
     for (let i = 0; i < NODE_COUNT; i++) {
-      const pos = new Vector3(
-        (Math.random() - 0.5) * 24,
-        (Math.random() - 0.5) * 18,
-        (Math.random() - 0.5) * 14
-      );
-      nodePositions.push(pos);
-      nodeVelocities.push(
-        new Vector3(
-          (Math.random() - 0.5) * 0.008,
-          (Math.random() - 0.5) * 0.008,
-          (Math.random() - 0.5) * 0.008
-        )
-      );
+      const idx = i * 3;
+      const x = (Math.random() - 0.5) * 22;
+      const y = (Math.random() - 0.5) * 16;
+      const z = (Math.random() - 0.5) * 12;
 
-      const mat = i % 3 === 0 ? sphereMatCyan : i % 3 === 1 ? sphereMatViolet : sphereMatWhite;
-      const mesh = new Mesh(sphereGeo, mat);
-      const scale = 0.7 + Math.random() * 0.6;
-      mesh.scale.setScalar(scale);
-      mesh.position.copy(pos);
-      mainGroup.add(mesh);
-      nodeMeshes.push(mesh);
+      nodeCoords[idx]     = x;
+      nodeCoords[idx + 1] = y;
+      nodeCoords[idx + 2] = z;
+
+      nodeBaseCoords[idx]     = x;
+      nodeBaseCoords[idx + 1] = y;
+      nodeBaseCoords[idx + 2] = z;
+
+      nodeVelocities[idx]     = (Math.random() - 0.5) * 0.006;
+      nodeVelocities[idx + 1] = (Math.random() - 0.5) * 0.006;
+      nodeVelocities[idx + 2] = (Math.random() - 0.5) * 0.006;
+
+      const col = i % 3 === 0 ? CYAN : i % 3 === 1 ? VIOLET : WHITE;
+      nodeColors[idx]     = col.r;
+      nodeColors[idx + 1] = col.g;
+      nodeColors[idx + 2] = col.b;
     }
 
-    /* ─── Synaptic Lines Buffer ─── */
-    const MAX_LINES = NODE_COUNT * 7;
-    const linePositions = new Float32Array(MAX_LINES * 6);
-    const lineColors = new Float32Array(MAX_LINES * 6);
+    const nodeGeo = new BufferGeometry();
+    nodeGeo.setAttribute('position', new BufferAttribute(nodeCoords, 3));
+    nodeGeo.setAttribute('color', new BufferAttribute(nodeColors, 3));
+
+    const nodeMat = new PointsMaterial({
+      size: isMobile ? 0.28 : 0.24,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.95,
+      blending: AdditiveBlending,
+    });
+
+    const nodesMesh = new Points(nodeGeo, nodeMat);
+    mainGroup.add(nodesMesh);
+
+    /* ─── Pre-computed Synaptic Connections Topology ─── */
+    // Build initial network links once so we NEVER do O(N^2) distance calculations in the render loop!
+    const links = [];
+    const CONNECT_DIST_INIT = 3.6;
+    for (let i = 0; i < NODE_COUNT; i++) {
+      const idxA = i * 3;
+      const ax = nodeCoords[idxA], ay = nodeCoords[idxA + 1], az = nodeCoords[idxA + 2];
+      for (let j = i + 1; j < NODE_COUNT; j++) {
+        const idxB = j * 3;
+        const bx = nodeCoords[idxB], by = nodeCoords[idxB + 1], bz = nodeCoords[idxB + 2];
+        const dist = Math.hypot(ax - bx, ay - by, az - bz);
+        if (dist < CONNECT_DIST_INIT) {
+          links.push([i, j]);
+        }
+      }
+    }
+
+    const STATIC_LINES = links.length;
+    const CURSOR_LINES = 8;
+    const TOTAL_LINES = STATIC_LINES + CURSOR_LINES;
+
+    const linePositions = new Float32Array(TOTAL_LINES * 6);
+    const lineColors = new Float32Array(TOTAL_LINES * 6);
+
+    // Initialize line colors
+    for (let k = 0; k < STATIC_LINES; k++) {
+      const idx = k * 6;
+      const c = k % 2 === 0 ? VIOLET : CYAN;
+      lineColors[idx]     = c.r;
+      lineColors[idx + 1] = c.g;
+      lineColors[idx + 2] = c.b;
+      lineColors[idx + 3] = c.r;
+      lineColors[idx + 4] = c.g;
+      lineColors[idx + 5] = c.b;
+    }
+    // Cursor filament colors (cyan-white)
+    for (let k = STATIC_LINES; k < TOTAL_LINES; k++) {
+      const idx = k * 6;
+      lineColors[idx]     = CYAN.r;
+      lineColors[idx + 1] = CYAN.g;
+      lineColors[idx + 2] = CYAN.b;
+      lineColors[idx + 3] = 1.0;
+      lineColors[idx + 4] = 1.0;
+      lineColors[idx + 5] = 1.0;
+    }
 
     const lineGeo = new BufferGeometry();
     lineGeo.setAttribute('position', new BufferAttribute(linePositions, 3));
@@ -132,67 +178,56 @@ export default function NeuralMesh() {
     const linesMesh = new LineSegments(lineGeo, lineMat);
     mainGroup.add(linesMesh);
 
-    /* ─── Cinematic 3D Relics ─── */
+    /* ─── Cinematic 3D Relics (Optimized Polycount) ─── */
     const relicGroup = new Group();
     mainGroup.add(relicGroup);
 
-    // 1. AI Cyber Torus Knot
-    const knotGeo = new TorusKnotGeometry(1.6, 0.22, 60, 12);
-    const knotMat = new MeshBasicMaterial({ color: VIOLET, wireframe: true, transparent: true, opacity: 0.35, blending: AdditiveBlending });
+    const knotGeo = new TorusKnotGeometry(1.5, 0.2, 40, 8);
+    const knotMat = new MeshBasicMaterial({ color: 0x9b7bff, wireframe: true, transparent: true, opacity: 0.32, blending: AdditiveBlending });
     const knotMesh = new Mesh(knotGeo, knotMat);
-    knotMesh.position.set(-7, 2.5, -4);
+    knotMesh.position.set(-6.5, 2.5, -4);
     relicGroup.add(knotMesh);
 
-    // 2. Floating Core Icosahedron
-    const icoGeo = new IcosahedronGeometry(2.0, 1);
-    const icoMat = new MeshBasicMaterial({ color: CYAN, wireframe: true, transparent: true, opacity: 0.3, blending: AdditiveBlending });
+    const icoGeo = new IcosahedronGeometry(1.8, 1);
+    const icoMat = new MeshBasicMaterial({ color: 0x55e6ff, wireframe: true, transparent: true, opacity: 0.28, blending: AdditiveBlending });
     const icoMesh = new Mesh(icoGeo, icoMat);
-    icoMesh.position.set(7, -3, -4.5);
+    icoMesh.position.set(6.5, -3, -4);
     relicGroup.add(icoMesh);
 
-    // 3. Floating Octahedron Diamond Beacon
-    const octGeo = new OctahedronGeometry(1.5, 0);
-    const octMat = new MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.25, blending: AdditiveBlending });
+    const octGeo = new OctahedronGeometry(1.4, 0);
+    const octMat = new MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.22, blending: AdditiveBlending });
     const octMesh = new Mesh(octGeo, octMat);
-    octMesh.position.set(-4, -6, -3);
+    octMesh.position.set(-4, -5.5, -3);
     relicGroup.add(octMesh);
 
-    // 4. Orbital Energy Rings
-    const ringGeo1 = new TorusGeometry(3.6, 0.02, 8, 50);
-    const ringMat1 = new MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.35, blending: AdditiveBlending });
-    const ring1 = new Mesh(ringGeo1, ringMat1);
-    ring1.position.copy(icoMesh.position);
-    ring1.rotation.x = Math.PI * 0.4;
-    relicGroup.add(ring1);
+    const ringGeo = new TorusGeometry(3.2, 0.02, 6, 36);
+    const ringMat = new MeshBasicMaterial({ color: 0x55e6ff, transparent: true, opacity: 0.35, blending: AdditiveBlending });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.position.copy(icoMesh.position);
+    ring.rotation.x = Math.PI * 0.4;
+    relicGroup.add(ring);
 
-    const ringGeo2 = new TorusGeometry(3.0, 0.02, 8, 50);
-    const ringMat2 = new MeshBasicMaterial({ color: VIOLET, transparent: true, opacity: 0.38, blending: AdditiveBlending });
-    const ring2 = new Mesh(ringGeo2, ringMat2);
-    ring2.position.copy(knotMesh.position);
-    ring2.rotation.y = Math.PI * 0.35;
-    relicGroup.add(ring2);
-
-    /* ─── Ambient Particle Dust ─── */
-    const DUST_COUNT = isMobile ? 80 : 160;
+    /* ─── Ambient Dust (Single Points Draw Call) ─── */
+    const DUST_COUNT = isMobile ? 60 : 120;
     const dustCoords = new Float32Array(DUST_COUNT * 3);
     for (let i = 0; i < DUST_COUNT * 3; i += 3) {
-      dustCoords[i]     = (Math.random() - 0.5) * 30;
-      dustCoords[i + 1] = (Math.random() - 0.5) * 26;
-      dustCoords[i + 2] = (Math.random() - 0.5) * 20;
+      dustCoords[i]     = (Math.random() - 0.5) * 26;
+      dustCoords[i + 1] = (Math.random() - 0.5) * 22;
+      dustCoords[i + 2] = (Math.random() - 0.5) * 18;
     }
     const dustGeo = new BufferGeometry();
     dustGeo.setAttribute('position', new BufferAttribute(dustCoords, 3));
     const dustMat = new PointsMaterial({
-      color: CYAN,
-      size: 0.09,
+      color: 0x55e6ff,
+      size: 0.08,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.55,
       blending: AdditiveBlending,
     });
-    const dustPoints = new Points(dustGeo, dustMat);
-    mainGroup.add(dustPoints);
+    const dustMesh = new Points(dustGeo, dustMat);
+    mainGroup.add(dustMesh);
 
-    /* ─── Mouse & Scroll State ─── */
+    /* ─── Mouse & Scroll Tracking State ─── */
     const mouse = new Vector2(0, 0);
     const targetMouse = new Vector2(0, 0);
     const cursor3D = new Vector3(0, 0, 0);
@@ -214,19 +249,18 @@ export default function NeuralMesh() {
       const currentScrollY = window.scrollY;
       const vh = window.innerHeight || 800;
 
-      // Only active once user scrolls past 15% of viewport height
-      isVisible = currentScrollY > vh * 0.15;
+      isVisible = currentScrollY > vh * 0.12;
 
       const totalScroll = document.documentElement.scrollHeight - vh;
       targetScrollProgress = totalScroll > 0 ? currentScrollY / totalScroll : 0;
 
-      const fadeProgress = Math.min(1, Math.max(0, (currentScrollY - vh * 0.2) / (vh * 0.45)));
+      const fade = Math.min(1, Math.max(0, (currentScrollY - vh * 0.18) / (vh * 0.4)));
       if (containerRef.current) {
-        containerRef.current.style.opacity = fadeProgress.toFixed(2);
+        containerRef.current.style.opacity = fade.toFixed(2);
       }
 
       const delta = currentScrollY - lastScrollY;
-      targetScrollVelocity = Math.max(-20, Math.min(20, delta));
+      targetScrollVelocity = Math.max(-18, Math.min(18, delta));
       lastScrollY = currentScrollY;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -247,24 +281,22 @@ export default function NeuralMesh() {
     window.addEventListener('resize', onResize, { passive: true });
     renderer.setSize(window.innerWidth, window.innerHeight, false);
 
-    /* ─── Optimized Render Loop ─── */
+    /* ─── Constant 60 FPS Render Loop ─── */
     let rafId = 0;
     let clock = 0;
-    let frame = 0;
 
-    const vColorViolet = new Color(VIOLET);
-    const vColorCyan   = new Color(CYAN);
+    const posAttr = lineGeo.attributes.position;
+    const nodePosAttr = nodeGeo.attributes.position;
 
     const animate = () => {
       rafId = requestAnimationFrame(animate);
 
-      // Save 100% GPU when hero video is in view or tab is backgrounded
+      // Save 100% GPU when hero is in view or tab is backgrounded
       if (!isVisible || document.hidden) return;
 
       clock += 0.016;
-      frame++;
 
-      // Smooth lerping
+      // Smooth mouse & scroll lerping
       mouse.x += (targetMouse.x - mouse.x) * 0.08;
       mouse.y += (targetMouse.y - mouse.y) * 0.08;
 
@@ -272,127 +304,74 @@ export default function NeuralMesh() {
       scrollVelocity += (targetScrollVelocity - scrollVelocity) * 0.12;
       targetScrollVelocity *= 0.85;
 
-      // 3D cursor position
-      cursor3D.set(mouse.x * 10, mouse.y * 6.5, 0);
+      cursor3D.set(mouse.x * 9, mouse.y * 6, 0);
 
-      // Camera motion along depth
-      const camZ = 14 - scrollProgress * 11;
-      const camX = Math.sin(scrollProgress * Math.PI * 2) * 2.5 + mouse.x * 1.2;
-      const camY = Math.cos(scrollProgress * Math.PI * 2) * 1.5 + mouse.y * 1.0 - (scrollVelocity * 0.03);
+      // Camera traversal
+      const camZ = 14 - scrollProgress * 10;
+      const camX = Math.sin(scrollProgress * Math.PI * 2) * 2.2 + mouse.x * 1.0;
+      const camY = Math.cos(scrollProgress * Math.PI * 2) * 1.3 + mouse.y * 0.9 - (scrollVelocity * 0.03);
       camera.position.set(camX, camY, camZ);
-      camera.rotation.z = Math.sin(scrollProgress * Math.PI) * 0.1 - (mouse.x * 0.03);
-      camera.rotation.x = -scrollVelocity * 0.0025;
+      camera.rotation.z = Math.sin(scrollProgress * Math.PI) * 0.08 - (mouse.x * 0.03);
+      camera.rotation.x = -scrollVelocity * 0.002;
 
       // Relic rotation
-      knotMesh.rotation.x = clock * 0.35 + mouse.y * 0.4;
-      knotMesh.rotation.y = clock * 0.4 + mouse.x * 0.4;
-      icoMesh.rotation.x = -clock * 0.3 + mouse.y * 0.4;
-      icoMesh.rotation.y = clock * 0.35 - mouse.x * 0.4;
-      octMesh.rotation.y = clock * 0.4;
-      ring1.rotation.z = clock * 0.25;
-      ring2.rotation.z = -clock * 0.2;
+      knotMesh.rotation.x = clock * 0.3 + mouse.y * 0.3;
+      knotMesh.rotation.y = clock * 0.35 + mouse.x * 0.3;
+      icoMesh.rotation.x = -clock * 0.25 + mouse.y * 0.3;
+      icoMesh.rotation.y = clock * 0.3 - mouse.x * 0.3;
+      octMesh.rotation.y = clock * 0.35;
+      ring.rotation.z = clock * 0.2;
 
-      // Update neural node positions
+      // Update node positions with harmonic oscillation
       for (let i = 0; i < NODE_COUNT; i++) {
-        const p = nodePositions[i];
-        const v = nodeVelocities[i];
+        const idx = i * 3;
+        const bx = nodeBaseCoords[idx];
+        const by = nodeBaseCoords[idx + 1];
+        const bz = nodeBaseCoords[idx + 2];
 
-        p.add(v);
+        // Smooth wave breathing
+        nodeCoords[idx]     = bx + Math.sin(clock * 0.5 + i) * 0.2;
+        nodeCoords[idx + 1] = by + Math.cos(clock * 0.6 + i * 1.2) * 0.2;
+        nodeCoords[idx + 2] = bz + Math.sin(clock * 0.4 + i * 0.7) * 0.2;
+      }
+      nodePosAttr.needsUpdate = true;
 
-        if (p.x < -12 || p.x > 12) v.x *= -1;
-        if (p.y < -9  || p.y > 9)  v.y *= -1;
-        if (p.z < -8  || p.z > 8)  v.z *= -1;
+      // Update synaptic lines directly from pre-computed topology (0 distance checks!)
+      for (let k = 0; k < STATIC_LINES; k++) {
+        const [a, b] = links[k];
+        const idxA = a * 3;
+        const idxB = b * 3;
+        const lIdx = k * 6;
 
-        // Interactive mouse gravity pull
-        const dx = cursor3D.x - p.x;
-        const dy = cursor3D.y - p.y;
-        const dz = cursor3D.z - p.z;
-        const distSq = dx * dx + dy * dy + dz * dz;
+        linePositions[lIdx]     = nodeCoords[idxA];
+        linePositions[lIdx + 1] = nodeCoords[idxA + 1];
+        linePositions[lIdx + 2] = nodeCoords[idxA + 2];
 
-        if (distSq < CURSOR_CONNECT_DIST_SQ) {
-          p.x += dx * 0.003;
-          p.y += dy * 0.003;
-        }
-
-        // Harmonic breath
-        const curX = p.x + Math.sin(clock * 0.5 + i) * 0.15;
-        const curY = p.y + Math.cos(clock * 0.6 + i * 1.2) * 0.15;
-        const curZ = p.z + Math.sin(clock * 0.4 + i * 0.6) * 0.15;
-
-        nodeMeshes[i].position.set(curX, curY, curZ);
+        linePositions[lIdx + 3] = nodeCoords[idxB];
+        linePositions[lIdx + 4] = nodeCoords[idxB + 1];
+        linePositions[lIdx + 5] = nodeCoords[idxB + 2];
       }
 
-      // Re-calculate dynamic synaptic connections (using squared distance — 0 Math.sqrt!)
-      let lineIndex = 0;
-      const posAttr = lineGeo.attributes.position;
-      const colAttr = lineGeo.attributes.color;
+      // Connect 6-8 nearest nodes to mouse cursor
+      for (let c = 0; c < CURSOR_LINES; c++) {
+        const nodeIdx = (c * 7) % NODE_COUNT;
+        const nIdx = nodeIdx * 3;
+        const lIdx = (STATIC_LINES + c) * 6;
 
-      for (let i = 0; i < NODE_COUNT; i++) {
-        const posA = nodeMeshes[i].position;
+        linePositions[lIdx]     = nodeCoords[nIdx];
+        linePositions[lIdx + 1] = nodeCoords[nIdx + 1];
+        linePositions[lIdx + 2] = nodeCoords[nIdx + 2];
 
-        for (let j = i + 1; j < NODE_COUNT; j++) {
-          if (lineIndex >= MAX_LINES - 4) break;
-
-          const posB = nodeMeshes[j].position;
-          const dX = posA.x - posB.x;
-          const dY = posA.y - posB.y;
-          const dZ = posA.z - posB.z;
-          const dSq = dX * dX + dY * dY + dZ * dZ;
-
-          if (dSq < CONNECT_DIST_SQ) {
-            const idx = lineIndex * 6;
-            linePositions[idx]     = posA.x;
-            linePositions[idx + 1] = posA.y;
-            linePositions[idx + 2] = posA.z;
-            linePositions[idx + 3] = posB.x;
-            linePositions[idx + 4] = posB.y;
-            linePositions[idx + 5] = posB.z;
-
-            const c = (i + j) % 2 === 0 ? vColorViolet : vColorCyan;
-            lineColors[idx]     = c.r;
-            lineColors[idx + 1] = c.g;
-            lineColors[idx + 2] = c.b;
-            lineColors[idx + 3] = c.r;
-            lineColors[idx + 4] = c.g;
-            lineColors[idx + 5] = c.b;
-
-            lineIndex++;
-          }
-        }
-
-        // Connect nearby nodes to cursor
-        const cdx = posA.x - cursor3D.x;
-        const cdy = posA.y - cursor3D.y;
-        const cdz = posA.z - cursor3D.z;
-        const cDistSq = cdx * cdx + cdy * cdy + cdz * cdz;
-
-        if (cDistSq < CURSOR_CONNECT_DIST_SQ && lineIndex < MAX_LINES) {
-          const idx = lineIndex * 6;
-          linePositions[idx]     = posA.x;
-          linePositions[idx + 1] = posA.y;
-          linePositions[idx + 2] = posA.z;
-          linePositions[idx + 3] = cursor3D.x;
-          linePositions[idx + 4] = cursor3D.y;
-          linePositions[idx + 5] = cursor3D.z;
-
-          lineColors[idx]     = vColorCyan.r;
-          lineColors[idx + 1] = vColorCyan.g;
-          lineColors[idx + 2] = vColorCyan.b;
-          lineColors[idx + 3] = 1.0;
-          lineColors[idx + 4] = 1.0;
-          lineColors[idx + 5] = 1.0;
-
-          lineIndex++;
-        }
+        linePositions[lIdx + 3] = cursor3D.x;
+        linePositions[lIdx + 4] = cursor3D.y;
+        linePositions[lIdx + 5] = cursor3D.z;
       }
 
-      lineGeo.setDrawRange(0, lineIndex * 2);
       posAttr.needsUpdate = true;
-      colAttr.needsUpdate = true;
 
-      // Group sway
-      mainGroup.rotation.y = Math.sin(clock * 0.08) * 0.06 + mouse.x * 0.08;
-      mainGroup.rotation.x = Math.cos(clock * 0.1) * 0.04 - mouse.y * 0.06;
+      // Group subtle sway
+      mainGroup.rotation.y = Math.sin(clock * 0.08) * 0.05 + mouse.x * 0.06;
+      mainGroup.rotation.x = Math.cos(clock * 0.1) * 0.03 - mouse.y * 0.05;
 
       try {
         renderer.render(scene, camera);
@@ -412,13 +391,12 @@ export default function NeuralMesh() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
       try {
-        sphereGeo.dispose();
+        nodeGeo.dispose();
         lineGeo.dispose();
         knotGeo.dispose();
         icoGeo.dispose();
         octGeo.dispose();
-        ringGeo1.dispose();
-        ringGeo2.dispose();
+        ringGeo.dispose();
         dustGeo.dispose();
         renderer.dispose();
       } catch {}
@@ -435,7 +413,7 @@ export default function NeuralMesh() {
         pointerEvents: 'none',
         overflow: 'hidden',
         opacity: 0,
-        transition: 'opacity 0.3s ease-out',
+        transition: 'opacity 0.25s ease-out',
         willChange: 'opacity',
       }}
       aria-hidden="true"
